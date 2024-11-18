@@ -1,0 +1,174 @@
+local player = game.Players.LocalPlayer
+
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+
+local Window = OrionLib:MakeWindow({Name = "Moto Rush", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest"})
+
+--[[
+Name = <string> - The name of the UI.
+HidePremium = <bool> - Whether or not the user details shows Premium status or not.
+SaveConfig = <bool> - Toggles the config saving in the UI.
+ConfigFolder = <string> - The name of the folder where the configs are saved.
+IntroEnabled = <bool> - Whether or not to show the intro animation.
+IntroText = <string> - Text to show in the intro animation.
+IntroIcon = <string> - URL to the image you want to use in the intro animation.
+Icon = <string> - URL to the image you want displayed on the window.
+CloseCallback = <function> - Function to execute when the window is closed.
+]]
+
+local Tab = Window:MakeTab({
+	Name = "Race",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+--[[
+Name = <string> - The name of the tab.
+Icon = <string> - The icon of the tab.
+PremiumOnly = <bool> - Makes the tab accessible to Sirus Premium users only.
+]]
+
+local Section = Tab:AddSection({
+	Name = "Race"
+})
+
+--[[
+Name = <string> - The name of the section.
+]]
+
+OrionLib:MakeNotification({
+	Name = "Welcome!",
+	Content = "Notification content... what will it say??",
+	Image = "rbxassetid://4483345998",
+	Time = 5
+})
+
+--[[
+Title = <string> - The title of the notification.
+Content = <string> - The content of the notification.
+Image = <string> - The icon of the notification.
+Time = <number> - The duration of the notfication.
+]]
+
+Tab:AddButton({
+	Name = "Race Track",
+	Callback = function()
+      		-- Hanapin ang pangalan ng player na nagpapatakbo ng script
+local playerName = game.Players.LocalPlayer.Name
+
+-- Awtomatikong hanapin ang model ng player
+local model = game.Workspace.Bikes:FindFirstChild(playerName)
+
+-- Listahan ng mga coordinates
+local teleportPoints = {
+    Vector3.new(3815.17, 48.7955, 6836.07),
+    Vector3.new(3798.79, 48.7955, 6437.81),
+    Vector3.new(3781.09, 49.7955, 6047.7),
+    Vector3.new(4151.58, 51.724, 5741.06),
+    Vector3.new(3473.56, 48.7955, 5872.5),
+    Vector3.new(2702.57, 73.9759, 6017.31),
+    Vector3.new(1834.81, 89.6032, 6349.58),
+    Vector3.new(1566.46, 89.8003, 6116.47),
+    Vector3.new(1882.16, 77.6721, 5349.85),
+    Vector3.new(2528.63, 77.6721, 5488.12),
+    Vector3.new(1988.66, 77.6721, 5818.44),
+    Vector3.new(2308.65, 71.3192, 6013.07),
+    Vector3.new(3616.54, 63.0026, 5459.25),
+    Vector3.new(3768.06, 62.8873, 5532.49),
+    Vector3.new(3869.54, 63.0026, 5403.25),
+    Vector3.new(3619.96, 71.5806, 4649.12),
+    Vector3.new(4407.96, 73.2038, 4695.58),
+    Vector3.new(4393.58, 55.188, 5108.97),
+    Vector3.new(4148.97, 48.7955, 6156.83),
+}
+
+-- Target final coordinate after 2 cycles
+local finalPosition = Vector3.new(3935.79, 53.1608, 6481.45)
+
+-- Function para i-teleport ang model sunod-sunod
+local function teleportToNextPoint(index, maxCycles)
+    if model and index <= #teleportPoints then
+        local targetPosition = teleportPoints[index]
+        
+        -- Hanapin ang PrimaryPart ng model, kung wala pa, itakda ito
+        if not model.PrimaryPart then
+            model.PrimaryPart = model:FindFirstChild("Part")  -- Palitan ng tamang pangalan ng part kung kinakailangan
+        end
+
+        -- I-teleport ang model sa target na coordinates
+        model:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+
+        -- Maghintay ng 1 segundo bago mag-teleport sa susunod na point
+        wait(1)  -- Maaari mong baguhin ang 1 sa kung anong oras ang gusto mong interval
+
+        -- Tawagin ang function para sa susunod na teleport
+        teleportToNextPoint(index + 1, maxCycles)
+    elseif maxCycles > 1 then
+        -- Kung tapos na ang unang cycle, magsimula muli
+        wait(1)
+        teleportToNextPoint(1, maxCycles - 1)  -- Bumalik sa unang point at subukang muli
+    else
+        -- Kung natapos na ang dalawang cycles, pupunta sa final position
+        wait(1)
+        model:SetPrimaryPartCFrame(CFrame.new(finalPosition))  -- Teleport sa final position
+        print("Teleportation cycle tapos na, napunta sa final position.")
+    end
+end
+
+-- Simulan ang teleporting mula sa unang point, at limitahan sa 2 cycles (1 ulit)
+teleportToNextPoint(1, 2)
+
+  	end    
+})
+
+--[[
+Name = <string> - The name of the button.
+Callback = <function> - The function of the button.
+]]
+
+local Tab = Window:MakeTab({
+	Name = "Teleport",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+--[[
+Name = <string> - The name of the tab.
+Icon = <string> - The icon of the tab.
+PremiumOnly = <bool> - Makes the tab accessible to Sirus Premium users only.
+]]
+
+local Section = Tab:AddSection({
+	Name = "tp"
+})
+
+--[[
+Name = <string> - The name of the section.
+]]
+
+Tab:AddButton({
+	Name = "Race Track",
+	Callback = function()
+      		-- Hanapin ang player
+local player = game.Players.LocalPlayer
+
+-- Target coordinate
+local targetPosition = Vector3.new(3935.79, 53.1608, 6481.45)
+
+-- I-teleport ang player sa target na coordinates
+player.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+
+-- I-print kung tapos na ang teleport
+print("Player successfully teleported to the target coordinates.")
+
+  	end    
+})
+
+--[[
+Name = <string> - The name of the button.
+Callback = <function> - The function of the button.
+]]
+
+
+
+
