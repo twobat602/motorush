@@ -1,0 +1,1314 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "The Sewers",
+    ToggleKey = Enum.KeyCode.C,
+    Icon = "cat",
+    Author = "Twobat",
+    Folder = "MyTestHub",
+
+Size = UDim2.fromOffset(400, 300),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = false,
+    ScrollBarEnabled = true
+})
+
+Window:Tag({
+    Title = "V2.0",
+    Color = Color3.fromHex("#fa0a42")
+})
+
+Window:Tag({
+    Title = "Free",
+    Color = Color3.fromHex("#30ff6a")
+})
+
+--TAB
+
+local Main = Window:Tab({
+    Title = "Main",
+    Icon = "house",
+    Locked = false,
+})
+
+local Player = Window:Tab({
+    Title = "Player",
+    Icon = "user",
+    Locked = false,
+})
+
+local Collect = Window:Tab({
+    Title = "Collect",
+    Icon = "box",
+    Locked = false,
+})
+
+local Esp = Window:Tab({
+    Title = "Esp",
+    Icon = "eye",
+    Locked = false,
+})
+
+local Shop = Window:Tab({
+    Title = "Shop",
+    Icon = "box",
+    Locked = false,
+})
+
+local Setting = Window:Tab({
+    Title = "Setting",
+    Icon = "settings",
+    Locked = false,
+})
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+
+
+-- WalkSpeed Slider
+local Slider = Main:Slider({
+    Title = "WalkSpeed",
+    Step = 1,
+    Value = {
+        Min = 16,    -- bawal bumaba sa 16
+        Max = 120,   -- maximum walk speed
+        Default = 16, -- default walk speed
+    },
+    Callback = function(value)
+        if humanoid then
+            humanoid.WalkSpeed = value
+        end
+    end
+})
+
+-- JumpPower Slider
+local Slider = Main:Slider({
+    Title = "JumpPower",
+    Step = 1,
+    Value = {
+        Min = 50,    -- bawal bumaba sa 50
+        Max = 200,   -- maximum jump power
+        Default = 50, -- default jump power
+    },
+    Callback = function(value)
+        if humanoid then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = value
+        end
+    end
+})
+
+local UnliJump = false
+local player = game.Players.LocalPlayer
+local humanoid
+
+-- Re-assign humanoid sa respawn
+local function setupHumanoid(h)
+    humanoid = h
+end
+
+if player.Character then
+    setupHumanoid(player.Character:WaitForChild("Humanoid"))
+end
+
+player.CharacterAdded:Connect(function(char)
+    setupHumanoid(char:WaitForChild("Humanoid"))
+end)
+
+-- Toggle para sa Infinite Jump
+local Toggle = Main:Toggle({
+    Title = "Unli Jump",
+    Desc = "Jump anytime, even in air",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        UnliJump = state
+    end
+})
+
+-- Infinite Jump Script
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if UnliJump and humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+local RunService = game:GetService("RunService")
+local player = game.Players.LocalPlayer
+local NoClip = false
+
+-- Character references
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Update character references on respawn
+player.CharacterAdded:Connect(function(char)
+    character = char
+    humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+end)
+
+-- Noclip toggle
+local Toggle = Main:Toggle({
+    Title = "Noclip",
+    Desc = "Pass through walls",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        NoClip = state
+    end
+})
+
+-- Loop para sa Noclip
+RunService.RenderStepped:Connect(function()
+    if NoClip and character then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+
+-- Flying variables
+local flying = false
+local bodyVelocity
+local bodyGyro
+
+-- Fly speed variables
+local targetFlySpeed = 70
+local currentFlySpeed = 70
+
+-- NoClip toggle
+local NoClip = false
+local teleporting = false
+
+-- Update character references on respawn
+player.CharacterAdded:Connect(function(char)
+    character = char
+    rootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+end)
+
+-- Functions
+local function startFlying()
+    if flying or not rootPart then return end
+    flying = true
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.new(0,0,0)
+    bodyVelocity.Parent = rootPart
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
+    bodyGyro.CFrame = camera.CFrame
+    bodyGyro.Parent = rootPart
+end
+
+local function stopFlying()
+    if not flying then return end
+    flying = false
+    if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity=nil end
+    if bodyGyro then bodyGyro:Destroy(); bodyGyro=nil end
+end
+
+-- Flying & NoClip update loop
+RunService.RenderStepped:Connect(function()
+    if not rootPart or not character then return end
+
+    -- NoClip
+    if NoClip then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+
+    -- Fly
+    if flying and bodyVelocity and bodyGyro then
+        currentFlySpeed = currentFlySpeed + (targetFlySpeed - currentFlySpeed) * 0.1
+
+        local direction = Vector3.new()
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += camera.CFrame.LookVector*currentFlySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction += camera.CFrame.LookVector*-currentFlySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction += camera.CFrame.RightVector*-currentFlySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += camera.CFrame.RightVector*currentFlySpeed end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction += Vector3.new(0,currentFlySpeed,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then direction += Vector3.new(0,-currentFlySpeed,0) end
+
+        bodyVelocity.Velocity = direction
+        bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + camera.CFrame.LookVector)
+    end
+end)
+
+-- Fly toggle
+local Toggle = Main:Toggle({
+    Title = "Fly",
+    Desc = "Allow this so you can fly",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        if state then
+            startFlying()
+        else
+            stopFlying()
+        end
+    end
+})
+
+-- Fly speed slider
+local Slider = Main:Slider({
+    Title = "Fly Speed",
+    Step = 1,
+    Value = {Min = 70, Max = 200, Default = 70},
+    Callback = function(value)
+        targetFlySpeed = value
+        print("Target fly speed: "..value)
+    end
+})
+
+-- F key toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        if flying then
+            stopFlying()
+            Toggle:Set(false)
+        else
+            startFlying()
+            Toggle:Set(true)
+        end
+    end
+end)
+
+-- Stop flying kapag namatay
+humanoid.Died:Connect(stopFlying)
+
+
+--teleport to player
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local selectedPlayer = nil
+
+local function getPlayerNames()
+    local names = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player then
+            table.insert(names, plr.Name)
+        end
+    end
+    return names
+end
+
+-- Dropdown setup
+local Dropdown = Player:Dropdown({ 
+    Title = "Players",
+    Values = getPlayerNames(),
+    Value = "",
+    Callback = function(option)
+        selectedPlayer = option
+        print("Player selected: " .. (selectedPlayer or "None"))
+    end
+})
+
+-- Button setup
+local Button = Player:Button({ 
+    Title = "Teleport to Player",
+    Desc = "Teleport to selected player",
+    Locked = false,
+    Callback = function()
+        if selectedPlayer then
+            local target = Players:FindFirstChild(selectedPlayer)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+                print("Teleported to: " .. selectedPlayer)
+            else
+                print("Target player not valid!")
+            end
+        else
+            print("No player selected!")
+        end
+    end
+})
+
+-- Force-refresh function
+local function refreshDropdown()
+    local currentSelection = selectedPlayer
+    Dropdown:SetValue("") -- Clear selection to force update
+    Dropdown:SetValues(getPlayerNames())
+    -- Restore selection kung valid pa
+    if currentSelection and table.find(getPlayerNames(), currentSelection) then
+        Dropdown:SetValue(currentSelection)
+        selectedPlayer = currentSelection
+    else
+        selectedPlayer = nil
+    end
+end
+
+-- Auto-refresh every 5 seconds
+spawn(function()
+    while true do
+        wait(5)
+        refreshDropdown()
+    end
+end)
+
+local savedPosition = nil
+local waitingForConfirm = false
+
+-- Save Position Button
+local Button = Player:Button({
+    Title = "Save Position",
+    Desc = "Save your current position",
+    Locked = false,
+    Callback = function()
+        local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+
+        if savedPosition and not waitingForConfirm then
+            -- Activate inline confirmation
+            waitingForConfirm = true
+            WindUI:Notify({
+                Title = "Overwrite Saved Position?",
+                Content = "Click Save again to confirm overwrite or ignore to cancel.",
+                Duration = 5,
+                Icon = "info",
+            })
+        elseif savedPosition and waitingForConfirm then
+            -- Confirm overwrite
+            savedPosition = playerRoot.CFrame
+            waitingForConfirm = false
+            WindUI:Notify({
+                Title = "Position Overwritten",
+                Content = "Your position has been overwritten!",
+                Duration = 3,
+                Icon = "smile",
+            })
+        else
+            -- Save normally if no previous position
+            savedPosition = playerRoot.CFrame
+            WindUI:Notify({
+                Title = "Position Saved",
+                Content = "Your current position has been saved!",
+                Duration = 3,
+                Icon = "smile",
+            })
+        end
+    end
+})
+
+-- Teleport to Saved Position Button
+local Button = Player:Button({
+    Title = "Teleport to Saved Position",
+    Desc = "Teleport back to your saved position",
+    Locked = false,
+    Callback = function()
+        local playerRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if playerRoot and savedPosition then
+            playerRoot.CFrame = savedPosition
+            WindUI:Notify({
+                Title = "Teleported",
+                Content = "You have been teleported to your saved position!",
+                Duration = 3,
+                Icon = "smile",
+            })
+        else
+            WindUI:Notify({
+                Title = "No Saved Position",
+                Content = "You haven't saved a position yet!",
+                Duration = 3,
+                Icon = "frown",
+            })
+        end
+    end
+})
+
+
+--bring player
+local Button = Player:Button({ 
+    Title = "Bring player",
+    Desc = "Bring BeanBag in front of you",
+    Locked = false,
+    Callback = function()
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local beanBag = workspace:FindFirstChild("DynamicFurniture") and workspace.DynamicFurniture:FindFirstChild("BeanBag")
+        if beanBag and beanBag:IsA("Model") then
+            local ownerAttribute = beanBag:GetAttribute("Owner")
+            if ownerAttribute == nil or ownerAttribute == player.UserId then
+                -- Siguraduhin may PrimaryPart ang Model
+                if not beanBag.PrimaryPart then
+                    beanBag.PrimaryPart = beanBag:FindFirstChildWhichIsA("BasePart")
+                end
+                if beanBag.PrimaryPart then
+                    beanBag:SetPrimaryPartCFrame(hrp.CFrame * CFrame.new(0, 0, -5))
+                end
+            end
+        end
+    end
+})
+
+
+local Paragraph = Player:Paragraph({
+    Title = "How to use Bring Player?",
+    Desc = "To bring player you need to click the button first and create a clan, after that, ask the player to sit and join to your clan then tp to location you want and click bring again\n\nThis will work if there's a beanbag",
+    Color = "White",
+    Locked = false,
+
+})
+
+--COLLECT ALL
+-- Mapping ng category sa function
+local collectFunctions = {
+    ["Scrap2"] = function()
+        for _, scrap in ipairs(game.Workspace.DynamicFurniture:GetChildren()) do
+            if scrap:IsA("Model") and scrap.Name == "Scrap2" then
+                local owner = scrap:GetAttribute("Owner")
+                if owner == nil then
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    local part = scrap:FindFirstChildWhichIsA("MeshPart")
+                    if root and part then
+                        part.CFrame = root.CFrame * CFrame.new(0,0,-2)
+                    end
+                end
+            end
+        end
+    end,
+
+    ["Pallet2"] = function()
+        for _, pallet in ipairs(game.Workspace.DynamicFurniture:GetChildren()) do
+            if pallet:IsA("Model") and pallet.Name == "Pallet2" then
+                local owner = pallet:GetAttribute("Owner")
+                if owner == nil then
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        pallet:SetPrimaryPartCFrame(root.CFrame * CFrame.new(0,0,-2))
+                    end
+                end
+            end
+        end
+    end,
+
+    ["Television"] = function()
+        for _, tv in ipairs(game.Workspace.DynamicFurniture:GetChildren()) do
+            if tv:IsA("Model") and tv.Name == "Television" then
+                local owner = tv:GetAttribute("Owner")
+                if owner == nil then
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    local part = tv:FindFirstChildWhichIsA("MeshPart")
+                    if root and part then
+                        part.CFrame = root.CFrame * CFrame.new(0,0,-2)
+                    end
+                end
+            end
+        end
+    end,
+
+    ["TrashCan"] = function()
+        for _, trash in ipairs(game.Workspace.DynamicFurniture:GetChildren()) do
+            if trash:IsA("Model") and trash.Name == "TrashCan" then
+                local owner = trash:GetAttribute("Owner")
+                if owner == nil then
+                    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                    local part = trash:FindFirstChildWhichIsA("MeshPart")
+                    if root and part then
+                        part.CFrame = root.CFrame * CFrame.new(0,0,-2)
+                    end
+                end
+            end
+        end
+    end,
+}
+
+-- Selected categories
+local selectedCategories = {}
+
+-- Dropdown setup
+local Dropdown = Collect:Dropdown({ 
+    Title = "Select Furniture",
+    Values = { "Scrap2", "Pallet2", "Television", "TrashCan" },
+    Value = {},
+    Multi = true,
+    AllowNone = true,
+    Callback = function(option)
+        selectedCategories = option
+        print("Categories selected: " .. HttpService:JSONEncode(selectedCategories))
+    end
+})
+
+-- Collect Button
+local Button = Collect:Button({ 
+    Title = "Collect", 
+    Desc = "Collect selected furniture",
+    Locked = false,
+    Callback = function()
+        for _, category in ipairs(selectedCategories) do
+            local func = collectFunctions[category]
+            if func then
+                func()
+            end
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+local event = ReplicatedStorage:WaitForChild("shared/network@GlobalEvents"):WaitForChild("useDroppedItem")
+local dynamic = workspace:WaitForChild("DynamicFurniture")
+
+-- Listahan ng mga items
+local targetItems = { "Burger", "BottlePack", "MushroomBase", "Cheese", "PoisonMushroom", "Gear", "Bottle" }
+
+local collecting = false
+local selectedItem = nil -- dito malalagay kung anong napili sa dropdown
+
+-- Dropdown para pumili ng i-cocollect
+local Dropdown = Collect:Dropdown({
+    Title = "Select Item",
+    Desc = "Choose which item to auto collect",
+    Values = targetItems,
+    Default = "Burger",
+    Callback = function(value)
+        selectedItem = value
+        print("Selected Item: " .. tostring(value))
+    end
+})
+
+-- Toggle para i-on/off ang loop
+local Toggle = Collect:Toggle({ 
+    Title = "Auto Collect",
+    Desc = "Toggle auto collect",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state) 
+        collecting = state
+        print("Auto Collect: " .. tostring(state))
+
+        if collecting then
+            task.spawn(function()
+                while collecting do
+                    if selectedItem then
+                        -- Para sa mga Model sa DynamicFurniture
+                        for _, obj in ipairs(dynamic:GetChildren()) do
+                            if obj.Name == selectedItem and obj:IsA("Model") then
+                                local part = obj:FindFirstChild("Handle") or obj:FindFirstChild("Main") or obj.PrimaryPart
+                                if part then
+                                    hrp.CFrame = part.CFrame * CFrame.new(0, 0, 3)
+                                    task.wait(0.2)
+                                    event:FireServer(obj)
+                                end
+                            end
+                        end
+
+                        -- Para sa mga Tool sa workspace
+                        for _, obj in ipairs(workspace:GetChildren()) do
+                            if obj:IsA("Tool") and obj.Name == selectedItem then
+                                local handle = obj:FindFirstChild("Handle")
+                                if handle then
+                                    hrp.CFrame = handle.CFrame * CFrame.new(0, 0, 3)
+                                    task.wait(0.2)
+                                    event:FireServer(obj)
+                                end
+                            end
+                        end
+                    end
+
+                    task.wait(1) -- interval bago ulitin
+                end
+            end)
+        end
+    end
+})
+
+
+--esp
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- ESP storage
+local ESPObjects = {}
+local ESPEnabled = false
+
+-- Table to store connections
+local CharacterAddedConnections = {}
+
+-- Function to create ESP for a player
+local function createESP(player)
+    if not ESPEnabled then return end -- ONLY create if toggle is on
+    if player == LocalPlayer then return end
+    if ESPObjects[player] then return end -- prevents duplicate
+
+    local char = player.Character
+    if not char then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = char
+    highlight.FillColor = Color3.fromRGB(0,255,0)
+    highlight.OutlineColor = Color3.fromRGB(0,255,0)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = char
+
+    local text = Drawing.new("Text")
+    text.Size = 14
+    text.Center = true
+    text.Outline = true
+    text.OutlineColor = Color3.fromRGB(0,0,0)
+    text.Color = Color3.fromRGB(255,255,255)
+    text.Visible = true
+
+    ESPObjects[player] = {Highlight = highlight, Text = text}
+end
+
+-- Remove ESP
+local function removeESP(player)
+    local obj = ESPObjects[player]
+    if obj then
+        if obj.Highlight then obj.Highlight:Destroy() end
+        if obj.Text then obj.Text:Remove() end
+        ESPObjects[player] = nil
+    end
+end
+
+-- Update ESP each frame
+RunService.RenderStepped:Connect(function()
+    if not ESPEnabled then return end
+    for player, obj in pairs(ESPObjects) do
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local rootPos, onScreen = Camera:WorldToViewportPoint(char.HumanoidRootPart.Position)
+            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+            obj.Text.Position = Vector2.new(rootPos.X, rootPos.Y - 25)
+            obj.Text.Text = player.Name .. " | " .. math.floor(distance) .. " studs"
+            obj.Text.Visible = onScreen
+        else
+            removeESP(player)
+        end
+    end
+end)
+
+-- Function to connect CharacterAdded listener for a player
+local function connectCharacter(player)
+    local conn = player.CharacterAdded:Connect(function(char)
+        if ESPEnabled then
+            createESP(player)
+        end
+    end)
+    CharacterAddedConnections[player] = conn
+end
+
+-- Disconnect CharacterAdded listener
+local function disconnectCharacter(player)
+    if CharacterAddedConnections[player] then
+        CharacterAddedConnections[player]:Disconnect()
+        CharacterAddedConnections[player] = nil
+    end
+end
+
+-- Handle players leaving
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+    disconnectCharacter(player)
+end)
+
+-- Toggle ESP
+local Toggle = Esp:Toggle({ 
+    Title = "Toggle",
+    Desc = "Show ESP for all players",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        ESPEnabled = state
+        if ESPEnabled then
+            -- Create ESP for all current players and connect CharacterAdded
+            for _, player in pairs(Players:GetPlayers()) do
+                createESP(player)
+                connectCharacter(player)
+            end
+        else
+            -- Remove all ESP and disconnect listeners
+            for player, _ in pairs(ESPObjects) do
+                removeESP(player)
+            end
+            for player, _ in pairs(CharacterAddedConnections) do
+                disconnectCharacter(player)
+            end
+        end
+    end
+})
+
+-- Optional: handle players who join while toggle is off (no ESP created)
+Players.PlayerAdded:Connect(function(player)
+    -- Connect CharacterAdded listener but ESP only created if toggle is on
+    connectCharacter(player)
+end)
+
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- ESP storage
+local ItemESPObjects = {}
+local ItemESPEnabled = false
+local SelectedCategories = {}
+
+-- Item categories and their paths
+local ItemPaths = {
+    ["Burger"] = Workspace.DynamicFurniture,
+    ["Cheese"] = Workspace.DynamicFurniture,
+    ["BottlePack"] = Workspace.DynamicFurniture,
+    ["MushroomBase"] = Workspace.DynamicFurniture,
+    ["PoisonMushroom"] = Workspace.DynamicFurniture,
+    ["Gear"] = Workspace,
+    ["Bottle"] = Workspace
+}
+
+-- Table to store connections for ChildAdded
+local ChildAddedConnections = {}
+
+-- Function to get item's position safely
+local function getItemPosition(item)
+    if item:IsA("Model") then
+        if item.PrimaryPart then
+            return item.PrimaryPart.Position
+        else
+            return item:GetPivot().Position
+        end
+    elseif item:IsA("BasePart") then
+        return item.Position
+    end
+    return nil
+end
+
+-- Create ESP for an item
+local function createItemESP(item)
+    if ItemESPObjects[item] then return end
+    if not item.Parent then return end
+
+    -- Highlight
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = item
+    highlight.FillColor = Color3.fromRGB(255, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = item
+
+    -- Text
+    local text = Drawing.new("Text")
+    text.Size = 14
+    text.Center = true
+    text.Outline = true
+    text.OutlineColor = Color3.fromRGB(0,0,0)
+    text.Color = Color3.fromRGB(255,255,255)
+    text.Visible = true
+
+    ItemESPObjects[item] = {Highlight = highlight, Text = text}
+end
+
+-- Remove ESP
+local function removeItemESP(item)
+    local obj = ItemESPObjects[item]
+    if obj then
+        if obj.Highlight then obj.Highlight:Destroy() end
+        if obj.Text then obj.Text:Remove() end
+        ItemESPObjects[item] = nil
+    end
+end
+
+-- Refresh ESP based on selected categories
+local function refreshItemESP()
+    -- Remove all current ESP
+    for item, _ in pairs(ItemESPObjects) do
+        removeItemESP(item)
+    end
+
+    -- Disconnect previous ChildAdded connections
+    for _, conn in pairs(ChildAddedConnections) do
+        conn:Disconnect()
+    end
+    ChildAddedConnections = {}
+
+    -- Loop through selected categories
+    for _, category in ipairs(SelectedCategories) do
+        local parent = ItemPaths[category]
+        if parent then
+            -- ESP existing items
+            for _, item in ipairs(parent:GetChildren()) do
+                if item.Name == category then
+                    createItemESP(item)
+                end
+            end
+
+            -- Listen for newly spawned items
+            local conn = parent.ChildAdded:Connect(function(child)
+                if child.Name == category and ItemESPEnabled then
+                    createItemESP(child)
+                end
+            end)
+            table.insert(ChildAddedConnections, conn)
+        end
+    end
+end
+
+-- Update ESP each frame
+RunService.RenderStepped:Connect(function()
+    if not ItemESPEnabled then return end
+    for item, obj in pairs(ItemESPObjects) do
+        if item and item.Parent then
+            local position = getItemPosition(item)
+            if position then
+                local rootPos, onScreen = Camera:WorldToViewportPoint(position)
+                local distance = 0
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    distance = (LocalPlayer.Character.HumanoidRootPart.Position - position).Magnitude
+                end
+                obj.Text.Position = Vector2.new(rootPos.X, rootPos.Y - 25)
+                obj.Text.Text = item.Name .. " | " .. math.floor(distance) .. " studs"
+                obj.Text.Visible = onScreen
+            else
+                removeItemESP(item)
+            end
+        else
+            removeItemESP(item)
+        end
+    end
+end)
+
+-- Dropdown
+local Dropdown = Esp:Dropdown({ 
+    Title = "Items to ESP",
+    Values = { "Burger", "Cheese", "BottlePack", "MushroomBase", "PoisonMushroom", "Gear", "Bottle" },
+    Value = { "" },
+    Multi = true,
+    AllowNone = true,
+    Callback = function(option) 
+        SelectedCategories = option
+        if ItemESPEnabled then
+            refreshItemESP()
+        end
+    end
+})
+
+-- Toggle
+local Toggle = Esp:Toggle({ 
+    Title = "Item ESP",
+    Desc = "Show ESP for selected items",
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state) 
+        ItemESPEnabled = state
+        if state then
+            refreshItemESP()
+        else
+            -- Remove all ESP
+            for item, _ in pairs(ItemESPObjects) do
+                removeItemESP(item)
+            end
+            -- Disconnect ChildAdded listeners
+            for _, conn in pairs(ChildAddedConnections) do
+                conn:Disconnect()
+            end
+            ChildAddedConnections = {}
+        end
+    end
+})
+
+--shop
+
+local Paragraph = Shop:Paragraph({
+    Title = "Gamepass Weapon",
+    Desc = "Buy gamepass item without spending robux",
+    Color = Color3.fromHex("#30ff6a"),
+    ImageSize = 10,
+    Thumbnail = "rbxassetid://133496899705709",
+    ThumbnailSize = 160,
+    Locked = false,
+    Buttons = {
+        {
+            Icon = "dollar-sign",
+            Title = "Buy Railgun", 
+            Callback = function()
+                local player = game.Players.LocalPlayer
+                local leaderstats = player:FindFirstChild("leaderstats")
+                local bottles = leaderstats and leaderstats:FindFirstChild("Bottles")
+                local price = 5364
+
+                if not bottles or bottles.Value < price then
+                    WindUI:Notify({
+                        Title = "Not enough Bottles",
+                        Content = "You need " .. price .. " Bottles to buy Railgun!",
+                        Duration = 3,
+                        Icon = "circle-alert",
+                    })
+                    return
+                end
+
+                -- Fire server if enough
+                local args = { [1] = "Railgun" }
+                game:GetService("ReplicatedStorage")
+                    :WaitForChild("shared/network@GlobalEvents", 9e9)
+                    :WaitForChild("buyItem", 9e9)
+                    :FireServer(unpack(args))
+
+                WindUI:Notify({
+                    Title = "Purchased",
+                    Content = "Railgun successfully bought!",
+                    Duration = 3,
+                    Icon = "check",
+                })
+            end,
+        },
+        {
+            Icon = "dollar-sign",
+            Title = "Buy Assault", 
+            Callback = function()
+                local player = game.Players.LocalPlayer
+                local leaderstats = player:FindFirstChild("leaderstats")
+                local bottles = leaderstats and leaderstats:FindFirstChild("Bottles")
+                local price = 16091
+
+                if not bottles or bottles.Value < price then
+                    WindUI:Notify({
+                        Title = "Not enough Bottles",
+                        Content = "You need " .. price .. " Bottles to buy Assault Rifle!",
+                        Duration = 3,
+                        Icon = "circle-alert",
+                    })
+                    return
+                end
+
+                -- Fire server if enough
+                local args = { [1] = "AssaultRifle" }
+                game:GetService("ReplicatedStorage")
+                    :WaitForChild("shared/network@GlobalEvents", 9e9)
+                    :WaitForChild("buyItem", 9e9)
+                    :FireServer(unpack(args))
+
+                WindUI:Notify({
+                    Title = "Purchased",
+                    Content = "Assault Rifle successfully bought!",
+                    Duration = 3,
+                    Icon = "check",
+                })
+            end,
+        }
+    }
+})
+--settings
+
+local player = game.Players.LocalPlayer
+local savedPosition = nil
+local teleportPosition = Vector3.new(144, 419, 46)
+local toggled = false
+local platform = nil
+
+local function setupCharacter()
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    humanoid.HealthChanged:Connect(function(health)
+        if toggled then
+            if health <= 70 then
+                if not savedPosition then
+                    savedPosition = rootPart.Position
+                end
+                rootPart.CFrame = CFrame.new(teleportPosition)
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                
+                if not platform then
+                    platform = Instance.new("Part")
+                    platform.Size = Vector3.new(10, 1, 10)
+                    platform.Position = teleportPosition - Vector3.new(0, 3, 0)
+                    platform.Anchored = true
+                    platform.CanCollide = true
+                    platform.Transparency = 1
+                    platform.Parent = game.Workspace
+                end
+            elseif health >= 80 and savedPosition then
+                if platform then
+                    platform:Destroy()
+                    platform = nil
+                end
+                rootPart.CFrame = CFrame.new(savedPosition)
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                savedPosition = nil
+            end
+        end
+    end)
+end
+
+player.CharacterAdded:Connect(setupCharacter)
+if player.Character then
+    setupCharacter()
+end
+
+-- Toggle integration
+local Toggle = Setting:Toggle({ 
+    Title = "Auto Safe Place", 
+    Desc = "Automatically prevents you from dying to players", 
+    Icon = "badge-check",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state) 
+        toggled = state
+        if not state and savedPosition and player.Character then
+            local character = player.Character
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                if platform then
+                    platform:Destroy()
+                    platform = nil
+                end
+                rootPart.CFrame = CFrame.new(savedPosition)
+                rootPart.Velocity = Vector3.new(0, 0, 0)
+                savedPosition = nil
+            end
+        end
+        print("Auto Safe Place Activated: " .. tostring(state))
+    end
+})
+--chest
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+local highlightedChest = nil
+local highlightInstance = nil
+local healthConnection = nil
+local clickConnection = nil
+
+-- Move items to chest (from index 0 to 27)
+local function moveItemsToChest(chestModel)
+	for i = 0, 27 do
+		local args = {
+			[1] = i;
+			[2] = chestModel;
+		}
+		ReplicatedStorage:WaitForChild("shared/network@GlobalEvents"):WaitForChild("moveItemToChest"):FireServer(unpack(args))
+	end
+end
+
+-- Get first ProximityPrompt inside the chest
+local function getPromptInModel(model)
+	for _, descendant in ipairs(model:GetDescendants()) do
+		if descendant:IsA("ProximityPrompt") then
+			return descendant
+		end
+	end
+	return nil
+end
+
+-- CLICK CHEST BUTTON (isang beses lang, Model Chest lang)
+local ButtonSelect = Setting:Button({
+	Title = "Click Chest",
+	Desc = "Select a chest to highlight",
+	Locked = false,
+	Callback = function()
+		if highlightedChest then 
+			WindUI:Notify({
+				Title = "Notice",
+				Content = "A chest is already selected. Reset first to select another.",
+				Duration = 3,
+				Icon = "bird",
+			})
+			return 
+		end
+
+		WindUI:Notify({
+			Title = "Select Chest",
+			Content = "Click a Chest model in the world.",
+			Duration = 3,
+			Icon = "bird",
+		})
+
+		if clickConnection then clickConnection:Disconnect() end
+
+		clickConnection = mouse.Button1Down:Connect(function()
+			local target = mouse.Target
+			if not target then return end
+
+			local model = target:FindFirstAncestorOfClass("Model")
+			if model and model:IsDescendantOf(workspace:WaitForChild("DynamicFurniture")) and model.Name:match("Chest") then
+				if not highlightedChest then
+					-- Remove previous highlight if exists
+					if highlightInstance then
+						highlightInstance:Destroy()
+					end
+
+					highlightedChest = model
+
+					-- Highlight chest
+					highlightInstance = Instance.new("Highlight")
+					highlightInstance.FillColor = Color3.new(1, 1, 0)
+					highlightInstance.OutlineColor = Color3.new(1, 0, 0)
+					highlightInstance.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+					highlightInstance.Adornee = model
+					highlightInstance.Parent = model
+
+					print("Chest highlighted:", model.Name)
+					WindUI:Notify({
+						Title = "Chest Highlighted",
+						Content = "You selected: "..model.Name,
+						Duration = 3,
+						Icon = "bird",
+					})
+
+					if clickConnection then
+						clickConnection:Disconnect()
+						clickConnection = nil
+					end
+				end
+			end
+		end)
+	end
+})
+
+-- RESET BUTTON
+local ButtonReset = Setting:Button({
+	Title = "Reset Highlight",
+	Desc = "Reset selected chest",
+	Locked = false,
+	Callback = function()
+		if highlightInstance then
+			highlightInstance:Destroy()
+			highlightInstance = nil
+		end
+		highlightedChest = nil
+
+		if clickConnection then
+			clickConnection:Disconnect()
+			clickConnection = nil
+		end
+
+		print("Highlight reset.")
+		WindUI:Notify({
+			Title = "Highlight Reset",
+			Content = "Chest highlight has been cleared.",
+			Duration = 3,
+			Icon = "bird",
+		})
+	end
+})
+
+-- OPEN CHEST BUTTON
+local ButtonOpen = Setting:Button({
+	Title = "Open Chest",
+	Desc = "Fire ProximityPrompt of selected chest",
+	Locked = false,
+	Callback = function()
+		if highlightedChest then
+			local prompt = getPromptInModel(highlightedChest)
+			if prompt then
+				local char = player.Character
+				if char and char:FindFirstChild("HumanoidRootPart") then
+					local originalCFrame = char.HumanoidRootPart.CFrame
+					-- Temporarily lapit sa chest
+					if highlightedChest.PrimaryPart then
+						char.HumanoidRootPart.CFrame = highlightedChest.PrimaryPart.CFrame + Vector3.new(0,3,0)
+					else
+						-- fallback: gamitin first part ng model
+						char.HumanoidRootPart.CFrame = highlightedChest:GetChildren()[1].CFrame + Vector3.new(0,3,0)
+					end
+					
+					-- Fire the ProximityPrompt
+					fireproximityprompt(prompt)
+					
+					-- Babalik sa original position
+					char.HumanoidRootPart.CFrame = originalCFrame
+					
+					print("Chest opened via ProximityPrompt.")
+					WindUI:Notify({
+						Title = "Chest Opened",
+						Content = "You opened: "..highlightedChest.Name,
+						Duration = 3,
+						Icon = "bird",
+					})
+				else
+					warn("Character or HumanoidRootPart not found.")
+				end
+			else
+				warn("No ProximityPrompt found in chest.")
+				WindUI:Notify({
+					Title = "Warning",
+					Content = "No ProximityPrompt found in this chest.",
+					Duration = 3,
+					Icon = "bird",
+				})
+			end
+		else
+			warn("No chest selected.")
+			WindUI:Notify({
+				Title = "Warning",
+				Content = "No chest selected.",
+				Duration = 3,
+				Icon = "bird",
+			})
+		end
+	end
+})
+
+
+-- TOGGLE: Auto Move on Low Health
+local AutoMoveToggle = Setting:Toggle({
+	Title = "Auto Move on Low HP",
+	Desc = "Moves items to chest when HP <= 50",
+	Icon = "bird",
+	Type = "Checkbox",
+	Default = false,
+	Callback = function(enabled)
+		if enabled then
+			healthConnection = RunService.RenderStepped:Connect(function()
+				local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.Health <= 50 and highlightedChest then
+					moveItemsToChest(highlightedChest)
+				end
+			end)
+		else
+			if healthConnection then
+				healthConnection:Disconnect()
+				healthConnection = nil
+			end
+		end
+		print("Auto Move on Low HP: "..tostring(enabled))
+	end
+})
