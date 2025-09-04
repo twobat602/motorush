@@ -199,12 +199,155 @@ local currentFlySpeed = 70
 local NoClip = false
 local teleporting = false
 
+-- Mobile controls
+local mobileControlsEnabled = false
+local mobileControlGui
+local flyButton, upButton, downButton
+local mobileInputActive = false
+local mobileInputDirection = Vector3.new()
+
 -- Update character references on respawn
 player.CharacterAdded:Connect(function(char)
     character = char
     rootPart = character:WaitForChild("HumanoidRootPart")
     humanoid = character:WaitForChild("Humanoid")
+    
+    -- Recreate mobile controls if they were enabled
+    if mobileControlsEnabled then
+        createMobileControls()
+    end
 end)
+
+-- Create mobile controls UI
+local function createMobileControls()
+    if mobileControlGui then mobileControlGui:Destroy() end
+    
+    mobileControlGui = Instance.new("ScreenGui")
+    mobileControlGui.Name = "FlyMobileControls"
+    mobileControlGui.Parent = player.PlayerGui
+    mobileControlGui.ResetOnSpawn = false
+    
+    -- Fly toggle button
+    flyButton = Instance.new("TextButton")
+    flyButton.Name = "FlyButton"
+    flyButton.Size = UDim2.new(0, 100, 0, 50)
+    flyButton.Position = UDim2.new(0, 20, 1, -70)
+    flyButton.AnchorPoint = Vector2.new(0, 1)
+    flyButton.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+    flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    flyButton.Text = "Fly: OFF"
+    flyButton.Parent = mobileControlGui
+    
+    -- Up button
+    upButton = Instance.new("TextButton")
+    upButton.Name = "UpButton"
+    upButton.Size = UDim2.new(0, 80, 0, 80)
+    upButton.Position = UDim2.new(1, -100, 1, -180)
+    upButton.AnchorPoint = Vector2.new(1, 1)
+    upButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    upButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    upButton.Text = "↑"
+    upButton.Visible = false
+    upButton.Parent = mobileControlGui
+    
+    -- Down button
+    downButton = Instance.new("TextButton")
+    downButton.Name = "DownButton"
+    downButton.Size = UDim2.new(0, 80, 0, 80)
+    downButton.Position = UDim2.new(1, -100, 1, -90)
+    downButton.AnchorPoint = Vector2.new(1, 1)
+    downButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    downButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    downButton.Text = "↓"
+    downButton.Visible = false
+    downButton.Parent = mobileControlGui
+    
+    -- Joystick for movement
+    local joystickFrame = Instance.new("Frame")
+    joystickFrame.Name = "JoystickFrame"
+    joystickFrame.Size = UDim2.new(0, 150, 0, 150)
+    joystickFrame.Position = UDim2.new(0, 20, 1, -220)
+    joystickFrame.AnchorPoint = Vector2.new(0, 1)
+    joystickFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    joystickFrame.BackgroundTransparency = 0.5
+    joystickFrame.Visible = false
+    joystickFrame.Parent = mobileControlGui
+    
+    local joystick = Instance.new("Frame")
+    joystick.Name = "Joystick"
+    joystick.Size = UDim2.new(0, 50, 0, 50)
+    joystick.Position = UDim2.new(0.5, -25, 0.5, -25)
+    joystick.AnchorPoint = Vector2.new(0.5, 0.5)
+    joystick.BackgroundColor3 = Color3.fromRGB(85, 170, 255)
+    joystick.BorderSizePixel = 0
+    joystick.Parent = joystickFrame
+    
+    -- Mobile button events
+    flyButton.MouseButton1Click:Connect(function()
+        if flying then
+            stopFlying()
+            Toggle:Set(false)
+            flyButton.Text = "Fly: OFF"
+            upButton.Visible = false
+            downButton.Visible = false
+            joystickFrame.Visible = false
+        else
+            startFlying()
+            Toggle:Set(true)
+            flyButton.Text = "Fly: ON"
+            upButton.Visible = true
+            downButton.Visible = true
+            joystickFrame.Visible = true
+        end
+    end)
+    
+    -- Mobile movement input
+    local function updateMobileInput()
+        mobileInputDirection = Vector3.new()
+        
+        if UserInputService.TouchEnabled then
+            -- Handle joystick input
+            for _, touch in pairs(UserInputService:GetTouches()) do
+                if touch.UserInputType == Enum.UserInputType.Touch then
+                    local touchPos = UserInputService:GetTouchLocation(touch)
+                    local joystickPos = joystickFrame.AbsolutePosition + joystickFrame.AbsoluteSize / 2
+                    local relativePos = Vector2.new(touchPos.X - joystickPos.X, touchPos.Y - joystickPos.Y)
+                    local distance = relativePos.Magnitude
+                    local maxDistance = joystickFrame.AbsoluteSize.X / 2
+                    
+                    if distance <= maxDistance then
+                        local direction = relativePos.Unit
+                        local intensity = math.min(distance / maxDistance, 1)
+                        
+                        -- Update joystick position
+                        joystick.Position = UDim2.new(0.5, direction.X * maxDistance * intensity, 
+                                                      0.5, direction.Y * maxDistance * intensity)
+                        
+                        -- Calculate movement direction based on camera orientation
+                        local camera = workspace.CurrentCamera
+                        local forward = camera.CFrame.LookVector * direction.Y * intensity
+                        local right = camera.CFrame.RightVector * direction.X * intensity
+                        
+                        mobileInputDirection = forward + right
+                        mobileInputActive = true
+                    end
+                end
+            end
+            
+            -- Handle up/down buttons
+            for _, button in pairs({upButton, downButton}) do
+                if button:IsActive() then
+                    local direction = button == upButton and 1 or -1
+                    mobileInputDirection += Vector3.new(0, direction, 0)
+                    mobileInputActive = true
+                end
+            end
+        end
+    end
+    
+    -- Connect to render stepped for mobile input
+    RunService.RenderStepped:Connect(updateMobileInput)
+end
 
 -- Functions
 local function startFlying()
@@ -247,17 +390,44 @@ RunService.RenderStepped:Connect(function()
         currentFlySpeed = currentFlySpeed + (targetFlySpeed - currentFlySpeed) * 0.1
 
         local direction = Vector3.new()
+        
+        -- Keyboard input
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction += camera.CFrame.LookVector*currentFlySpeed end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction += camera.CFrame.LookVector*-currentFlySpeed end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction += camera.CFrame.RightVector*-currentFlySpeed end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction += camera.CFrame.RightVector*currentFlySpeed end
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction += Vector3.new(0,currentFlySpeed,0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then direction += Vector3.new(0,-currentFlySpeed,0) end
+        
+        -- Mobile input
+        if mobileInputActive then
+            direction += mobileInputDirection * currentFlySpeed
+        end
 
         bodyVelocity.Velocity = direction
         bodyGyro.CFrame = CFrame.new(rootPart.Position, rootPart.Position + camera.CFrame.LookVector)
     end
 end)
+
+-- Mobile controls toggle
+local Toggle = Main:Toggle({
+    Title = "Mobile Controls",
+    Desc = "Enable mobile controls for flying",
+    Icon = "smartphone",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        mobileControlsEnabled = state
+        if state then
+            createMobileControls()
+        else
+            if mobileControlGui then
+                mobileControlGui:Destroy()
+                mobileControlGui = nil
+            end
+        end
+    end
+})
 
 -- Fly toggle
 local Toggle = Main:Toggle({
@@ -269,8 +439,18 @@ local Toggle = Main:Toggle({
     Callback = function(state)
         if state then
             startFlying()
+            if mobileControlsEnabled and flyButton then
+                flyButton.Text = "Fly: ON"
+                upButton.Visible = true
+                downButton.Visible = true
+            end
         else
             stopFlying()
+            if mobileControlsEnabled and flyButton then
+                flyButton.Text = "Fly: OFF"
+                upButton.Visible = false
+                downButton.Visible = false
+            end
         end
     end
 })
@@ -286,19 +466,21 @@ local Slider = Main:Slider({
     end
 })
 
--- F key toggle
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        if flying then
-            stopFlying()
-            Toggle:Set(false)
-        else
-            startFlying()
-            Toggle:Set(true)
+-- F key toggle (only for non-mobile)
+if not UserInputService.TouchEnabled then
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.F then
+            if flying then
+                stopFlying()
+                Toggle:Set(false)
+            else
+                startFlying()
+                Toggle:Set(true)
+            end
         end
-    end
-end)
+    end)
+end
 
 -- Stop flying kapag namatay
 humanoid.Died:Connect(stopFlying)
@@ -1309,6 +1491,41 @@ local ButtonOpen = Setting:Button({
 		end
 	end
 })
+
+local Button = Setting:Button({
+    Title = "Move Chest → Inventory",
+    Desc = "Move items from selected chest to your inventory",
+    Locked = false,
+    Callback = function()
+        if highlightedChest then
+            -- Move items 0–27 from selected chest to inventory
+            for i = 0, 27 do
+                local args = {
+                    [1] = i,
+                    [2] = highlightedChest
+                }
+                game:GetService("ReplicatedStorage"):WaitForChild("shared/network@GlobalEvents")
+                    :WaitForChild("moveChestItemToInventory"):FireServer(unpack(args))
+            end
+
+            WindUI:Notify({
+                Title = "Moved to Inventory",
+                Content = "Items from "..highlightedChest.Name.." moved to your inventory.",
+                Duration = 3,
+                Icon = "bird",
+            })
+        else
+            WindUI:Notify({
+                Title = "Warning",
+                Content = "No chest selected.",
+                Duration = 3,
+                Icon = "bird",
+            })
+        end
+    end
+})
+
+
 -- TOGGLE: Auto Move on Low Health
 local AutoMoveToggle = Setting:Toggle({
 	Title = "Auto Move on Low HP",
