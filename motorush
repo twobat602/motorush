@@ -575,6 +575,7 @@ local Button = Collect:Button({
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
@@ -582,8 +583,8 @@ local hrp = char:WaitForChild("HumanoidRootPart")
 local event = ReplicatedStorage:WaitForChild("shared/network@GlobalEvents"):WaitForChild("useDroppedItem")
 local dynamic = workspace:WaitForChild("DynamicFurniture")
 
--- Listahan ng mga items
-local targetItems = { "Burger", "BottlePack", "MushroomBase", "Cheese", "PoisonMushroom", "Gear", "Bottle" }
+-- Listahan ng mga items + Scrap
+local targetItems = { "Burger", "BottlePack", "MushroomBase", "Cheese", "PoisonMushroom", "Gear", "Bottle", "Scrap" }
 
 local collecting = false
 local selectedItem = nil -- dito malalagay kung anong napili sa dropdown
@@ -615,26 +616,47 @@ local Toggle = Collect:Toggle({
             task.spawn(function()
                 while collecting do
                     if selectedItem then
-                        -- Para sa mga Model sa DynamicFurniture
-                        for _, obj in ipairs(dynamic:GetChildren()) do
-                            if obj.Name == selectedItem and obj:IsA("Model") then
-                                local part = obj:FindFirstChild("Handle") or obj:FindFirstChild("Main") or obj.PrimaryPart
-                                if part then
-                                    hrp.CFrame = part.CFrame * CFrame.new(0, 0, 3)
-                                    task.wait(0.2)
-                                    event:FireServer(obj)
+                        if selectedItem == "Scrap" then
+                            -- Loop sa ScrapPile models
+                            for _, obj in pairs(dynamic:GetChildren()) do
+                                if not collecting then break end
+                                if obj.Name == "ScrapPile" and obj:IsA("Model") then
+                                    -- Teleport sa ScrapPile
+                                    hrp.CFrame = CFrame.new(obj:GetModelCFrame().Position + Vector3.new(0, 5, 0))
+                                    task.wait(1)
+
+                                    -- Fire all ProximityPrompts
+                                    for _, descendant in pairs(obj:GetDescendants()) do
+                                        if descendant:IsA("ProximityPrompt") then
+                                            fireproximityprompt(descendant)
+                                            task.wait(0.1)
+                                        end
+                                    end
+                                    task.wait(2)
                                 end
                             end
-                        end
+                        else
+                            -- Para sa mga Model sa DynamicFurniture
+                            for _, obj in ipairs(dynamic:GetChildren()) do
+                                if obj.Name == selectedItem and obj:IsA("Model") then
+                                    local part = obj:FindFirstChild("Handle") or obj:FindFirstChild("Main") or obj.PrimaryPart
+                                    if part then
+                                        hrp.CFrame = part.CFrame * CFrame.new(0, 0, 3)
+                                        task.wait(0.2)
+                                        event:FireServer(obj)
+                                    end
+                                end
+                            end
 
-                        -- Para sa mga Tool sa workspace
-                        for _, obj in ipairs(workspace:GetChildren()) do
-                            if obj:IsA("Tool") and obj.Name == selectedItem then
-                                local handle = obj:FindFirstChild("Handle")
-                                if handle then
-                                    hrp.CFrame = handle.CFrame * CFrame.new(0, 0, 3)
-                                    task.wait(0.2)
-                                    event:FireServer(obj)
+                            -- Para sa mga Tool sa workspace
+                            for _, obj in ipairs(workspace:GetChildren()) do
+                                if obj:IsA("Tool") and obj.Name == selectedItem then
+                                    local handle = obj:FindFirstChild("Handle")
+                                    if handle then
+                                        hrp.CFrame = handle.CFrame * CFrame.new(0, 0, 3)
+                                        task.wait(0.2)
+                                        event:FireServer(obj)
+                                    end
                                 end
                             end
                         end
@@ -646,6 +668,7 @@ local Toggle = Collect:Toggle({
         end
     end
 })
+
 
 
 --esp
@@ -1286,41 +1309,6 @@ local ButtonOpen = Setting:Button({
 		end
 	end
 })
-
-local Button = Setting:Button({
-    Title = "Move Chest → Inventory",
-    Desc = "Move items from selected chest to your inventory",
-    Locked = false,
-    Callback = function()
-        if highlightedChest then
-            -- Move items 0–27 from selected chest to inventory
-            for i = 0, 27 do
-                local args = {
-                    [1] = i,
-                    [2] = highlightedChest
-                }
-                game:GetService("ReplicatedStorage"):WaitForChild("shared/network@GlobalEvents")
-                    :WaitForChild("moveChestItemToInventory"):FireServer(unpack(args))
-            end
-
-            WindUI:Notify({
-                Title = "Moved to Inventory",
-                Content = "Items from "..highlightedChest.Name.." moved to your inventory.",
-                Duration = 3,
-                Icon = "bird",
-            })
-        else
-            WindUI:Notify({
-                Title = "Warning",
-                Content = "No chest selected.",
-                Duration = 3,
-                Icon = "bird",
-            })
-        end
-    end
-})
-
-
 -- TOGGLE: Auto Move on Low Health
 local AutoMoveToggle = Setting:Toggle({
 	Title = "Auto Move on Low HP",
