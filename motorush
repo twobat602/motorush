@@ -562,7 +562,6 @@ local Dropdown = Collect:Dropdown({
 })
 
 -- Collect Button
-})
 local Button = Collect:Button({ 
     Title = "Collect", 
     Desc = "Collect selected furniture",
@@ -581,22 +580,24 @@ local Section = Collect:Section({
     Title = "Auto Collect",
     TextXAlignment = "Left",
     TextSize = 17, -- Default Size
+})
+
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+local workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
 local event = ReplicatedStorage:WaitForChild("shared/network@GlobalEvents"):WaitForChild("useDroppedItem")
-local dynamic = Workspace:WaitForChild("DynamicFurniture")
+local dynamic = workspace:WaitForChild("DynamicFurniture")
 
 local targetItems = { "Burger", "BottlePack", "MushroomBase", "Cheese", "PoisonMushroom", "Gear", "Bottle", "Scrap" }
 
 local collecting = false
-local selectedItem = "Burger"
+local selectedItem = ""
 
 -- Dropdown
 local Dropdown = Collect:Dropdown({
@@ -636,34 +637,28 @@ end)
 -- Permanent auto collect loop
 task.spawn(function()
     while true do
-        task.wait(0.3) -- pacing ng loop
-        if not collecting then
-            continue -- skip agad kung naka off
-        end
-
-        if not hrp or not hrp.Parent then
-            continue
-        end
-
+        task.wait(0.3) -- mas mabagal na outer loop
+        if not collecting then continue end
+        if not hrp or not hrp.Parent then continue end
         pcall(function()
             if selectedItem == "Scrap" then
-                for _, obj in ipairs(dynamic:GetChildren()) do
+                local scrapPiles = dynamic:GetChildren()
+                for _, obj in ipairs(scrapPiles) do
                     if not collecting then break end
                     if obj.Name == "ScrapPile" and obj:IsA("Model") then
                         hrp.CFrame = CFrame.new(obj:GetModelCFrame().Position + Vector3.new(0,5,0))
-                        task.wait(0.2)
+                        task.wait(0.2) -- delay bago mag-fire prompts
                         for _, descendant in ipairs(obj:GetDescendants()) do
-                            if not collecting then break end
                             if descendant:IsA("ProximityPrompt") then
                                 fireproximityprompt(descendant)
-                                task.wait(0.1)
+                                task.wait(0.1) -- mas mataas delay para siguradong ma-fire
                             end
                         end
                         task.wait(1)
-                        if not collecting then break end
                     end
                 end
             else
+                -- Regular item collecting
                 for _, obj in ipairs(dynamic:GetChildren()) do
                     if not collecting then break end
                     if obj.Name == selectedItem and obj:IsA("Model") then
@@ -671,20 +666,18 @@ task.spawn(function()
                         if part then
                             hrp.CFrame = part.CFrame * CFrame.new(0,0,3)
                             task.wait(0.1)
-                            if not collecting then break end
                             event:FireServer(obj)
                         end
                     end
                 end
 
-                for _, obj in ipairs(Workspace:GetChildren()) do
+                for _, obj in ipairs(workspace:GetChildren()) do
                     if not collecting then break end
                     if obj:IsA("Tool") and obj.Name == selectedItem then
                         local handle = obj:FindFirstChild("Handle")
                         if handle then
                             hrp.CFrame = handle.CFrame * CFrame.new(0,0,3)
                             task.wait(0.1)
-                            if not collecting then break end
                             event:FireServer(obj)
                         end
                     end
