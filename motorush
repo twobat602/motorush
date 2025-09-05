@@ -479,7 +479,7 @@ local Paragraph = Player:Paragraph({
 
 --COLLECT ALL
 local Section = Collect:Section({ 
-    Title = "Bring Furniture",
+    Title = "Bring Furnilocal,
     TextXAlignment = "Left",
     TextSize = 17, -- Default Size
 })
@@ -562,11 +562,6 @@ local Dropdown = Collect:Dropdown({
 })
 
 -- Collect Button
-local Section = Collect:Section({ 
-    Title = "Auto Collect",
-    TextXAlignment = "Left",
-    TextSize = 17, -- Default Size
-})
 local Button = Collect:Button({ 
     Title = "Collect", 
     Desc = "Collect selected furniture",
@@ -579,6 +574,12 @@ local Button = Collect:Button({
             end
         end
     end
+})
+
+local Section = Collect:Section({ 
+    Title = "Auto Collect",
+    TextXAlignment = "Left",
+    TextSize = 17, -- Default Size
 })
 
 local Players = game:GetService("Players")
@@ -636,58 +637,60 @@ end)
 -- Permanent auto collect loop
 task.spawn(function()
     while true do
-        if collecting then
-            while collecting do
-                task.wait(0.3) -- mas mabagal na outer loop
-                if not hrp or not hrp.Parent then break end
-                pcall(function()
-                    if selectedItem == "Scrap" then
-                        for _, obj in ipairs(dynamic:GetChildren()) do
-                            if not collecting then break end
-                            if obj.Name == "ScrapPile" and obj:IsA("Model") then
-                                hrp.CFrame = CFrame.new(obj:GetModelCFrame().Position + Vector3.new(0,5,0))
-                                task.wait(0.2)
-                                for _, descendant in ipairs(obj:GetDescendants()) do
-                                    if not collecting then break end
-                                    if descendant:IsA("ProximityPrompt") then
-                                        fireproximityprompt(descendant)
-                                        task.wait(0.1)
-                                    end
-                                end
-                                task.wait(1)
-                            end
-                        end
-                    else
-                        for _, obj in ipairs(dynamic:GetChildren()) do
-                            if not collecting then break end
-                            if obj.Name == selectedItem and obj:IsA("Model") then
-                                local part = obj:FindFirstChild("Handle") or obj:FindFirstChild("Main") or obj.PrimaryPart
-                                if part then
-                                    hrp.CFrame = part.CFrame * CFrame.new(0,0,3)
-                                    task.wait(0.1)
-                                    event:FireServer(obj)
-                                end
-                            end
-                        end
+        task.wait(0.3) -- main loop speed
 
-                        for _, obj in ipairs(workspace:GetChildren()) do
+        if not collecting then
+            task.wait(0.5) -- pahinga kapag naka-off
+            continue
+        end
+
+        if not hrp or not hrp.Parent then continue end
+
+        pcall(function()
+            if selectedItem == "Scrap" then
+                for _, obj in ipairs(dynamic:GetChildren()) do
+                    if not collecting then break end
+                    if obj.Name == "ScrapPile" and obj:IsA("Model") then
+                        hrp.CFrame = CFrame.new(obj:GetModelCFrame().Position + Vector3.new(0,5,0))
+                        task.wait(0.2)
+                        for _, descendant in ipairs(obj:GetDescendants()) do
                             if not collecting then break end
-                            if obj:IsA("Tool") and obj.Name == selectedItem then
-                                local handle = obj:FindFirstChild("Handle")
-                                if handle then
-                                    hrp.CFrame = handle.CFrame * CFrame.new(0,0,3)
-                                    task.wait(0.1)
-                                    event:FireServer(obj)
-                                end
+                            if descendant:IsA("ProximityPrompt") then
+                                fireproximityprompt(descendant)
+                                task.wait(0.1)
                             end
+                        end
+                        task.wait(1)
+                        if not collecting then break end
+                    end
+                end
+            else
+                for _, obj in ipairs(dynamic:GetChildren()) do
+                    if not collecting then break end
+                    if obj.Name == selectedItem and obj:IsA("Model") then
+                        local part = obj:FindFirstChild("Handle") or obj:FindFirstChild("Main") or obj.PrimaryPart
+                        if part then
+                            hrp.CFrame = part.CFrame * CFrame.new(0,0,3)
+                            task.wait(0.1)
+                            event:FireServer(obj)
                         end
                     end
-                end)
+                end
+
+                for _, obj in ipairs(workspace:GetChildren()) do
+                    if not collecting then break end
+                    if obj:IsA("Tool") and obj.Name == selectedItem then
+                        local handle = obj:FindFirstChild("Handle")
+                        if handle then
+                            hrp.CFrame = handle.CFrame * CFrame.new(0,0,3)
+                            task.wait(0.1)
+                            event:FireServer(obj)
+                        end
+                    end
+                end
             end
-        end
-        task.wait(0.5) -- pahinga kapag naka-off
-    end
-end)
+        end)
+    Services
 
 --esp
 local Section = Esp:Section({ 
